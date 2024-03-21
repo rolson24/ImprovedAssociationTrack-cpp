@@ -55,3 +55,10 @@ docker run -ti --rm \
 ## License
 
 MIT
+
+## Acknowledgements
+Special thanks to the following projects:
+
+[BoTSORT-cpp](https://github.com/viplix3/BoTSORT-cpp/tree/main) For their implementation of Fast-ReID inference in TensorRt
+
+[ByteTrack-cpp](https://github.com/Vertical-Beach/ByteTrack-cpp) For their implementation of object trackers in c++.

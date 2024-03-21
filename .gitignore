@@ -33,3 +33,5 @@ build/*
 *.out
 *.app
 
+# Vscode files
+*.Vscode
