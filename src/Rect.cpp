@@ -1,92 +1,93 @@
-#include "ByteTrack/Rect.h"
+#include "ImprAssocTrack/Rect.h"
 
 #include <algorithm>
+#include <cmath>
 
 template <typename T>
-byte_track::Rect<T>::Rect(const T &x, const T &y, const T &width, const T &height) :
+ImprAssoc_track::Rect<T>::Rect(const T &x, const T &y, const T &width, const T &height) :
     tlwh({x, y, width, height})
 {
 }
 
 template <typename T>
-byte_track::Rect<T>::~Rect()
+ImprAssoc_track::Rect<T>::~Rect()
 {
 }
 
 template <typename T>
-const T& byte_track::Rect<T>::x() const
+const T& ImprAssoc_track::Rect<T>::x() const
 {
     return tlwh[0];
 }
 
 template <typename T>
-const T& byte_track::Rect<T>::y() const
+const T& ImprAssoc_track::Rect<T>::y() const
 {
     return tlwh[1];
 }
 
 template <typename T>
-const T& byte_track::Rect<T>::width() const
+const T& ImprAssoc_track::Rect<T>::width() const
 {
     return tlwh[2];
 }
 
 template <typename T>
-const T& byte_track::Rect<T>::height() const
+const T& ImprAssoc_track::Rect<T>::height() const
 {
     return tlwh[3];
 }
 
 template <typename T>
-T& byte_track::Rect<T>::x()
+T& ImprAssoc_track::Rect<T>::x()
 {
     return tlwh[0];
 }
 
 template <typename T>
-T& byte_track::Rect<T>::y()
+T& ImprAssoc_track::Rect<T>::y()
 {
     return tlwh[1];
 }
 
 template <typename T>
-T& byte_track::Rect<T>::width()
+T& ImprAssoc_track::Rect<T>::width()
 {
     return tlwh[2];
 }
 
 template <typename T>
-T& byte_track::Rect<T>::height()
+T& ImprAssoc_track::Rect<T>::height()
 {
     return tlwh[3];
 }
 
 template <typename T>
-const T& byte_track::Rect<T>::tl_x() const
+const T& ImprAssoc_track::Rect<T>::tl_x() const
 {
     return tlwh[0];
 }
 
 template <typename T>
-const T& byte_track::Rect<T>::tl_y() const
+const T& ImprAssoc_track::Rect<T>::tl_y() const
 {
     return tlwh[1];
 }
 
 template <typename T>
-T byte_track::Rect<T>::br_x() const
+T ImprAssoc_track::Rect<T>::br_x() const
 {
     return tlwh[0] + tlwh[2];
 }
 
 template <typename T>
-T byte_track::Rect<T>::br_y() const
+T ImprAssoc_track::Rect<T>::br_y() const
 {
     return tlwh[1] + tlwh[3];
 }
 
 template <typename T>
-byte_track::Tlbr<T> byte_track::Rect<T>::getTlbr() const
+ImprAssoc_track::Tlbr<T> ImprAssoc_track::Rect<T>::getTlbr() const
 {
     return {
         tlwh[0],
@@ -97,7 +98,7 @@ byte_track::Tlbr<T> byte_track::Rect<T>::getTlbr() const
 }
 
 template <typename T>
-byte_track::Xyah<T> byte_track::Rect<T>::getXyah() const
+ImprAssoc_track::Xyah<T> ImprAssoc_track::Rect<T>::getXyah() const
 {
     return {
         tlwh[0] + tlwh[2] / 2,
@@ -108,7 +109,7 @@ byte_track::Xyah<T> byte_track::Rect<T>::getXyah() const
 }
 
 template<typename T>
-float byte_track::Rect<T>::calcIoU(const Rect<T>& other) const
+float ImprAssoc_track::Rect<T>::calcIoU(const Rect<T>& other) const
 {
     const float box_area = (other.tlwh[2] + 1) * (other.tlwh[3] + 1);
     const float iw = std::min(tlwh[0] + tlwh[2], other.tlwh[0] + other.tlwh[2]) - std::max(tlwh[0], other.tlwh[0]) + 1;
@@ -126,24 +127,43 @@ float byte_track::Rect<T>::calcIoU(const Rect<T>& other) const
 }
 
 template<typename T>
-byte_track::Rect<T> byte_track::generate_rect_by_tlbr(const byte_track::Tlbr<T>& tlbr)
+float ImprAssoc_track::Rect<T>::calcR(const Rect<T>& other) const
 {
-    return byte_track::Rect<T>(tlbr[0], tlbr[1], tlbr[2] - tlbr[0], tlbr[3] - tlbr[1]);
+    const auto xyah = getXyah();
+    const float center_dist_sq = pow((xyah[0] - other.getXyah()[0] + 1),2) + pow((xyah[1] - other.getXyah()[1] + 1),2);
+    const float ow = std::max(tlwh[0] + tlwh[2], other.tlwh[0] + other.tlwh[2]) - std::min(tlwh[0], other.tlwh[0]) + 1;
+    float r = 0;
+    if (ow > 0)
+    {
+        const float oh = std::max(tlwh[1] + tlwh[3], other.tlwh[1] + other.tlwh[3]) - std::min(tlwh[1], other.tlwh[1]) + 1;
+        if (oh > 0)
+        {
+            const float corner_dist_sq = pow(ow,2) + pow(oh,2);
+            r = center_dist_sq/corner_dist_sq;
+        }
+    }
+    return r;
 }
 
 template<typename T>
-byte_track::Rect<T> byte_track::generate_rect_by_xyah(const byte_track::Xyah<T>& xyah)
+ImprAssoc_track::Rect<T> ImprAssoc_track::generate_rect_by_tlbr(const ImprAssoc_track::Tlbr<T>& tlbr)
+{
+    return ImprAssoc_track::Rect<T>(tlbr[0], tlbr[1], tlbr[2] - tlbr[0], tlbr[3] - tlbr[1]);
+}
+
+template<typename T>
+ImprAssoc_track::Rect<T> ImprAssoc_track::generate_rect_by_xyah(const ImprAssoc_track::Xyah<T>& xyah)
 {
     const auto width = xyah[2] * xyah[3];
-    return byte_track::Rect<T>(xyah[0] - width / 2, xyah[1] - xyah[3] / 2, width, xyah[3]);
+    return ImprAssoc_track::Rect<T>(xyah[0] - width / 2, xyah[1] - xyah[3] / 2, width, xyah[3]);
 }
 
 // explicit instantiation
-template class byte_track::Rect<int>;
-template class byte_track::Rect<float>;
+template class ImprAssoc_track::Rect<int>;
+template class ImprAssoc_track::Rect<float>;
 
-template byte_track::Rect<int> byte_track::generate_rect_by_tlbr<int>(const byte_track::Tlbr<int>&);
-template byte_track::Rect<float> byte_track::generate_rect_by_tlbr<float>(const byte_track::Tlbr<float>&);
+template ImprAssoc_track::Rect<int> ImprAssoc_track::generate_rect_by_tlbr<int>(const ImprAssoc_track::Tlbr<int>&);
+template ImprAssoc_track::Rect<float> ImprAssoc_track::generate_rect_by_tlbr<float>(const ImprAssoc_track::Tlbr<float>&);
 
-template byte_track::Rect<int> byte_track::generate_rect_by_xyah<int>(const byte_track::Xyah<int>&);
-template byte_track::Rect<float> byte_track::generate_rect_by_xyah<float>(const byte_track::Xyah<float>&);
+template ImprAssoc_track::Rect<int> ImprAssoc_track::generate_rect_by_xyah<int>(const ImprAssoc_track::Xyah<int>&);
+template ImprAssoc_track::Rect<float> ImprAssoc_track::generate_rect_by_xyah<float>(const ImprAssoc_track::Xyah<float>&);

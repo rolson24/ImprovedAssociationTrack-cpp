@@ -1,4 +1,4 @@
-#include "ByteTrack/lapjv.h"
+#include "ImprAssocTrack/lapjv.h"
 
 #include <cstddef>
 #include <cstring>
@@ -310,7 +310,7 @@ int _ca_dense(
 }
 
 /** Solve dense sparse LAP. */
-int byte_track::lapjv_internal(
+int ImprAssoc_track::lapjv_internal(
     const size_t n, double *cost[],
     int *x, int *y)
 {

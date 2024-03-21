@@ -1,8 +1,11 @@
-#include "ByteTrack/STrack.h"
+#include "ImprAssocTrack/STrack.h"
 
 #include <cstddef>
+#include <utility>
 
-byte_track::STrack::STrack(const Rect<float>& rect, const float& score) :
+ImprAssoc_track::STrack::STrack(const Rect<float>& rect, const float& score,
+                                std::optional<FeatureVector> feat,
+                                int feat_history_size) :
     kalman_filter_(),
     mean_(),
     covariance_(),
@@ -15,52 +18,60 @@ byte_track::STrack::STrack(const Rect<float>& rect, const float& score) :
     start_frame_id_(0),
     tracklet_len_(0)
 {
+    if (feat) {
+        feat_history_size_ = feat_history_size;
+        updateFeatures(std::make_shared<FeatureVector>(feat.value()));
+    } else {
+        curr_feat = nullptr;
+        smooth_feat = nullptr;
+        feat_history_size_ = 0;
+    }
 }
 
-byte_track::STrack::~STrack()
+ImprAssoc_track::STrack::~STrack()
 {
 }
 
-const byte_track::Rect<float>& byte_track::STrack::getRect() const
+const ImprAssoc_track::Rect<float>& ImprAssoc_track::STrack::getRect() const
 {
     return rect_;
 }
 
-const byte_track::STrackState& byte_track::STrack::getSTrackState() const
+const ImprAssoc_track::STrackState& ImprAssoc_track::STrack::getSTrackState() const
 {
     return state_;
 }
 
-const bool& byte_track::STrack::isActivated() const
+const bool& ImprAssoc_track::STrack::isActivated() const
 {
     return is_activated_;
 }
-const float& byte_track::STrack::getScore() const
+const float& ImprAssoc_track::STrack::getScore() const
 {
     return score_;
 }
 
-const size_t& byte_track::STrack::getTrackId() const
+const size_t& ImprAssoc_track::STrack::getTrackId() const
 {
     return track_id_;
 }
 
-const size_t& byte_track::STrack::getFrameId() const
+const size_t& ImprAssoc_track::STrack::getFrameId() const
 {
     return frame_id_;
 }
 
-const size_t& byte_track::STrack::getStartFrameId() const
+const size_t& ImprAssoc_track::STrack::getStartFrameId() const
 {
     return start_frame_id_;
 }
 
-const size_t& byte_track::STrack::getTrackletLength() const
+const size_t& ImprAssoc_track::STrack::getTrackletLength() const
 {
     return tracklet_len_;
 }
 
-void byte_track::STrack::activate(const size_t& frame_id, const size_t& track_id)
+void ImprAssoc_track::STrack::activate(const size_t& frame_id, const size_t& track_id)
 {
     kalman_filter_.initiate(mean_, covariance_, rect_.getXyah());
 
@@ -77,9 +88,9 @@ void byte_track::STrack::activate(const size_t& frame_id, const size_t& track_id
     tracklet_len_ = 0;
 }
 
-void byte_track::STrack::reActivate(const STrack &new_track, const size_t &frame_id, const int &new_track_id)
+void ImprAssoc_track::STrack::reActivate(const STrack &new_track, const size_t &frame_id, const int &new_track_id)
 {
-    kalman_filter_.update(mean_, covariance_, new_track.getRect().getXyah());
+    kalman_filter_.update(mean_, covariance_, new_track.getRect().getXyah(), score_);
 
     updateRect();
 
@@ -90,11 +101,15 @@ void byte_track::STrack::reActivate(const STrack &new_track, const size_t &frame
     {
         track_id_ = new_track_id;
     }
+    
+    if (new_track.curr_feat) {
+        updateFeatures(new_track.curr_feat);
+    }
     frame_id_ = frame_id;
     tracklet_len_ = 0;
 }
 
-void byte_track::STrack::predict()
+void ImprAssoc_track::STrack::predict()
 {
     if (state_ != STrackState::Tracked)
     {
@@ -103,30 +118,50 @@ void byte_track::STrack::predict()
     kalman_filter_.predict(mean_, covariance_);
 }
 
-void byte_track::STrack::update(const STrack &new_track, const size_t &frame_id)
+void ImprAssoc_track::STrack::update(const STrack &new_track, const size_t &frame_id)
 {
-    kalman_filter_.update(mean_, covariance_, new_track.getRect().getXyah());
+    kalman_filter_.update(mean_, covariance_, new_track.getRect().getXyah(), score_);
 
     updateRect();
 
     state_ = STrackState::Tracked;
     is_activated_ = true;
     score_ = new_track.getScore();
+    if (new_track.curr_feat) {
+        updateFeatures(new_track.curr_feat);
+    }
     frame_id_ = frame_id;
     tracklet_len_++;
 }
 
-void byte_track::STrack::markAsLost()
+void ImprAssoc_track::STrack::updateFeatures(const std::shared_ptr<FeatureVector> &feat)
+{
+    *feat /= feat->norm();
+    if (feature_history_.empty()) {
+        curr_feat = feat;
+        smooth_feat = std::make_unique<FeatureVector>(*curr_feat);
+    } else {
+        *smooth_feat = alpha_ * (*smooth_feat) + (1 - alpha_) * (*feat);
+    }
+
+    if (feature_history_.size() == feat_history_size_) {
+        feature_history_.pop_front();
+    }
+    feature_history_.push_back(curr_feat);
+    *smooth_feat /= smooth_feat->norm();
+}
+
+void ImprAssoc_track::STrack::markAsLost()
 {
     state_ = STrackState::Lost;
 }
 
-void byte_track::STrack::markAsRemoved()
+void ImprAssoc_track::STrack::markAsRemoved()
 {
     state_ = STrackState::Removed;
 }
 
-void byte_track::STrack::updateRect()
+void ImprAssoc_track::STrack::updateRect()
 {
     rect_.width() = mean_[2] * mean_[3];
     rect_.height() = mean_[3];
