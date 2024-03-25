@@ -464,4 +464,5 @@ std::vector<std::vector<ImprAssoc_track::Object>> convert_Detections_to_Objects(
             objects[i][j] = object;
         }
     }
+    return objects;
 }
