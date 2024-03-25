@@ -74,7 +74,24 @@ find_package(OpenCV REQUIRED)
 target_include_directories(${PROJECT_NAME} PUBLIC ${OpenCV_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
 
-# Build the tests if the 'BUILD_ImprAssocTRACK_TEST' variable is set to 'ON'
+# Build the example usage if the 'BUILD_IMPRASSOCTRACK_INFERENCE' variable is set to 'ON'
+set(BUILD_IMPRASSOCTRACK_INFERENCE OFF CACHE BOOL "The flag whether to build the inference or not")
+if(BUILD_IMPRASSOCTRACK_INFERENCE)
+  set_target_properties(ImprAssoctrack PROPERTIES
+    WINDOWS_EXPORT_ALL_SYMBOLS ON
+    OUTPUT_NAME "ImprAssoctrack"
+  )
+
+  add_executable(&{PROJECT_NAME}_inference 
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/example_usage_Impr_Assoc.cpp
+  )
+  target_link_libraries(${PROJECT_NAME}_test
+    PRIVATE
+    ${PROJECT_NAME}
+  )
+endif()
+
+# Build the tests if the 'BUILD_IMPRASSOCTRACK_TEST' variable is set to 'ON'
 set(BUILD_IMPRASSOCTRACK_TEST OFF CACHE BOOL "The flag whether to build the tests or not")
 if(BUILD_IMPRASSOCTRACK_TEST)
   enable_testing()
