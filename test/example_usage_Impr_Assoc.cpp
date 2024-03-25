@@ -391,7 +391,7 @@ int main(int argc, char **argv)
     std::vector<std::vector<Detection>> gt_per_frame =
             read_mot_gt_from_file(labels_dir);
     
-    std::vector<Object>& objects = convert_Detections_to_Objects(gt_per_frame);
+    std::vector<std::vector<ImprAssoc_track::Object>> objects = convert_Detections_to_Objects(gt_per_frame);
 
     while (cap.read(frame) || frame_counter < image_filepaths.size())
     {
@@ -444,4 +444,24 @@ int main(int argc, char **argv)
     cap.release();
 
     return 0;
+}
+
+std::vector<std::vector<ImprAssoc_track::Object>> convert_Detections_to_Objects(std::vector<std::vector<Detection>> gt_per_frame)
+{
+    std::vector<std::vector<ImprAssoc_track::Object>> objects;
+    objects.resize(gt_per_frame.size())
+    for (int i=0; i<gt_per_frame.size(); i++) {
+        objects[i].resize(gt_per_frame[i].size())
+        for (int j=0; j<gt_per_frame.size(); j++) {
+            auto detection = gt_per_frame[i][j];
+            auto cv_bbox = detection.Rect_;
+            ImprAssoc_track::Rect<float> bbox_tlwh;
+            bbox_tlwh.x() = cv_bbox.x;
+            bbox_tlwh.y() = cv_bbox.y;
+            bbox_tlwh.height() = cv_bbox.height;
+            bbox_tlwh.width() = cv_bbox.width;
+            ImprAssoc_track::Object object(bbox_tlwh, detection.class_id, detection.confidence);
+            objects[i][j] = object;
+        }
+    }
 }
