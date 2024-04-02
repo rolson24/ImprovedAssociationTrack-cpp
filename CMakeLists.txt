@@ -82,10 +82,10 @@ if(BUILD_IMPRASSOCTRACK_INFERENCE)
     OUTPUT_NAME "ImprAssoctrack"
   )
 
-  add_executable(&{PROJECT_NAME}_inference 
+  add_executable(${PROJECT_NAME}_inference 
     ${CMAKE_CURRENT_SOURCE_DIR}/test/example_usage_Impr_Assoc.cpp
   )
-  target_link_libraries(${PROJECT_NAME}_test
+  target_link_libraries(${PROJECT_NAME}_inference 
     PRIVATE
     ${PROJECT_NAME}
   )

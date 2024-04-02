@@ -14,10 +14,11 @@
 #include <opencv2/videoio.hpp>
 
 // #include "BoTSORT.h"
-#include "ImprAssocTracker.h"
-#include "DataType.h"
+#include "ImprAssocTrack/ImprAssocTracker.h"
+#include "ImprAssocTrack/DataType.h"
 // #include "GlobalMotionCompensation.h"
-#include "STrack.h"
+#include "ImprAssocTrack/STrack.h"
+#include ""
 
 
 #define TEST_GMC 0
