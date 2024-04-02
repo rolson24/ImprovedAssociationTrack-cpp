@@ -60,6 +60,9 @@ std::vector<ImprAssoc_track::ImprAssocTracker::STrackPtr> ImprAssoc_track::ImprA
     ////////////////// Step 1: Get detections //////////////////
     frame_id_++;
 
+    std::cout   << "start update function \n";
+    std::cout.flush();
+
     // Create new STracks using the result of object detection
     std::vector<STrackPtr> det_stracks;
     std::vector<STrackPtr> det_low_stracks;
@@ -86,9 +89,9 @@ std::vector<ImprAssoc_track::ImprAssocTracker::STrackPtr> ImprAssoc_track::ImprA
 
             if (object.prob >= high_thresh_)
             {
-                std::cout   << "strack "
-                            << strack->getScore()
-                            << " into high det\n";
+                // std::cout   << "strack "
+                //             << strack->getScore()
+                //             << " into high det\n";
                 det_stracks.push_back(strack);
             }
             else
@@ -157,7 +160,7 @@ std::vector<ImprAssoc_track::ImprAssocTracker::STrackPtr> ImprAssoc_track::ImprA
         
         // std::cout << "Before calcIouDistance (D)" << std::endl;
         // std::cout.flush();
-        std::tie(d_iou_dists, throw_away) = calcIouDistance(strack_pool, det_stracks, 0, true, true);
+        std::tie(d_iou_dists, throw_away) = calcIouDistance(strack_pool, det_stracks, 1, true, true);
         // std::cout << "After calcIouDistance (D)" << std::endl;
         // std::cout.flush();
 
@@ -212,8 +215,17 @@ std::vector<ImprAssoc_track::ImprAssocTracker::STrackPtr> ImprAssoc_track::ImprA
         linearAssignment(combined_dists, strack_pool.size(), det_stracks.size(), match_thresh_,
                          matches_idx, unmatch_track_idx, unmatch_detection_idx);
 
+        std::cout   << "size of matches "
+                    << matches_idx.size()
+                    << "\n";
+        std::cout.flush();
         for (const auto &match_idx : matches_idx)
-        {
+        {   
+            const auto dist = combined_dists[match_idx[0]][match_idx[1]];
+            std::cout   << "dist value "
+                        << dist
+                        << "\n";
+            std::cout.flush();
             const auto track = strack_pool[match_idx[0]];
             const auto det = det_stracks[match_idx[1]];
             if (track->getSTrackState() == STrackState::Tracked)
@@ -223,7 +235,10 @@ std::vector<ImprAssoc_track::ImprAssocTracker::STrackPtr> ImprAssoc_track::ImprA
             }
             else
             {
-                track->reActivate(*det, frame_id_);
+                std::cout   << "refind track "
+                            << track->getTrackId()
+                            << "\n";
+                track->reActivate(*det, frame_id_, -1);
                 refind_stracks.push_back(track);
             }
         }
@@ -234,10 +249,10 @@ std::vector<ImprAssoc_track::ImprAssocTracker::STrackPtr> ImprAssoc_track::ImprA
                         << unmatch_idx
                         << " to remain dets\n";
             std::cout.flush();
-            std::cout   << "det "
-                        << det_stracks[unmatch_idx]->getScore()
-                        << " about to be added to remain_det_stracks\n";
-            std::cout.flush();
+            // std::cout   << "det "
+            //             << det_stracks[unmatch_idx]->getScore()
+            //             << " about to be added to remain_det_stracks\n";
+            // std::cout.flush();
             remain_det_stracks.push_back(det_stracks[unmatch_idx]);
         }
 
@@ -246,6 +261,10 @@ std::vector<ImprAssoc_track::ImprAssocTracker::STrackPtr> ImprAssoc_track::ImprA
             const auto track = strack_pool[unmatch_track];
             if (track->getSTrackState() != STrackState::Lost)
             {
+                std::cout   << "lose track "
+                            << track->getTrackId()
+                            << "\n";
+                std::cout.flush();
                 track->markAsLost();
                 current_lost_stracks.push_back(track);
             }
@@ -266,8 +285,11 @@ std::vector<ImprAssoc_track::ImprAssocTracker::STrackPtr> ImprAssoc_track::ImprA
         std::vector<std::vector<float>> unmatched_iou_costs;
         std::vector<std::vector<bool>> throw_away;
 
+        std::vector<STrackPtr> updated_stracks;
+        updated_stracks = jointStracks(current_tracked_stracks, refind_stracks);
+
         // Calc iou dists (1-iou)
-        std::tie(unmatched_iou_costs, throw_away) = calcIouDistance(remain_det_stracks, strack_pool, 0, true, false);
+        std::tie(unmatched_iou_costs, throw_away) = calcIouDistance(remain_det_stracks, updated_stracks, 1, true, false);
         // linearAssignment(dists, non_active_stracks.size(), remain_det_stracks.size(), 0.7,
         //                  matches_idx, unmatch_unconfirmed_idx, unmatch_detection_idx);
 
@@ -275,19 +297,30 @@ std::vector<ImprAssoc_track::ImprAssocTracker::STrackPtr> ImprAssoc_track::ImprA
         std::cout   << "size of remain dets "
                     << remain_det_stracks.size()
                     << "\n";
-        std::cout   << "size of strack pool "
-                    << strack_pool.size()
+        std::cout   << "size of updated_stracks "
+                    << updated_stracks.size()
                     << "\n";
         std::cout.flush();
         for (auto i=0; i < remain_det_stracks.size(); i++){
             if (strack_pool.size() > 0){
                 // minimum is the lowest cost (1-iou) and highest iou
                 auto minimum = std::min_element(unmatched_iou_costs[i].begin(), unmatched_iou_costs[i].end());
+                std::cout   << "min iou distance "
+                            << *minimum
+                            << "\n";
+                std::cout.flush();
+
                 // 1 - min to get iou
                 if ((1 - *minimum) < overlap_thresh_){
                     const auto track = remain_det_stracks[i];
                     if (track->getScore() > new_track_thresh_) {
                         track_id_count_++;
+
+                        std::cout   << "activate det "
+                                    << track_id_count_
+                                    << "\n";
+                        std::cout.flush();
+
                         track->activate(frame_id_, track_id_count_);
                         if (reid_enabled_) {
                             FeatureVector embedding = _extract_features(frame, track->getRect());
@@ -299,10 +332,10 @@ std::vector<ImprAssoc_track::ImprAssocTracker::STrackPtr> ImprAssoc_track::ImprA
                 }
             } else {
                 const auto track = remain_det_stracks[i];
-                std::cout   << "det "
-                            << track->getScore()
-                            << " about to be activated\n";
-                std::cout.flush();
+                // std::cout   << "det "
+                //             << track->getScore()
+                //             << " about to be activated\n";
+                // std::cout.flush();
 
                 if (track->getScore() > new_track_thresh_) {
                     track_id_count_++;
@@ -316,14 +349,18 @@ std::vector<ImprAssoc_track::ImprAssocTracker::STrackPtr> ImprAssoc_track::ImprA
                         std::shared_ptr<FeatureVector> embedding_ptr = std::make_shared<FeatureVector>(embedding);
                         track->updateFeatures(embedding_ptr);
                     }
-                    std::cout   << "size of current tracked stracks "
-                                << current_tracked_stracks.size()
-                                << "\n";
-                    std::cout.flush();
+                    // std::cout   << "size of current tracked stracks "
+                    //             << current_tracked_stracks.size()
+                    //             << "\n";
+                    // std::cout.flush();
                     current_tracked_stracks.push_back(track);
                 }
             }
         }
+        std::cout   << "size of current tracked stracks "
+        << current_tracked_stracks.size()
+        << "\n";
+        std::cout.flush();
     }
 
     ////////////////// Step 5: Update state //////////////////
@@ -336,7 +373,8 @@ std::vector<ImprAssoc_track::ImprAssocTracker::STrackPtr> ImprAssoc_track::ImprA
         }
     }
 
-    tracked_stracks_ = jointStracks(current_tracked_stracks, refind_stracks);
+    tracked_stracks_ = jointStracks(tracked_stracks_, current_tracked_stracks);
+    tracked_stracks_ = jointStracks(tracked_stracks_, refind_stracks);
     lost_stracks_ = subStracks(jointStracks(subStracks(lost_stracks_, tracked_stracks_), current_lost_stracks), removed_stracks_);
     removed_stracks_ = jointStracks(removed_stracks_, current_removed_stracks);
 
@@ -662,9 +700,9 @@ ImprAssoc_track::ImprAssocTracker::calcIouDistance(const std::vector<STrackPtr> 
         for (size_t j = 0; j < ious[i].size(); j++)
         {
             if (ious[i][j] < thresh) {
-                mask[i][j] = false;
+                mask[i][j] = !above;
             } else {
-                mask[i][j] = true;
+                mask[i][j] = above;
             }
             iou.push_back(1 - ious[i][j]);
         }
@@ -755,8 +793,11 @@ ImprAssoc_track::ImprAssocTracker::fuseDistances(std::vector<std::vector<float>>
 
     std::vector<std::vector<float>> fused_cost_matrix;
     fused_cost_matrix.resize(iou_costs.size());
-
+    
+    std::cout << "fused cost matrix: \n";
+    std::cout << "[";
     for (int i=0; i<iou_costs.size(); i++) {
+        std::cout << "[";
         fused_cost_matrix[i].resize(iou_costs[i].size());
         for (int j=0; j<iou_costs[i].size(); j++) {
             if (iou_mask[i][j]) {
@@ -764,8 +805,12 @@ ImprAssoc_track::ImprAssocTracker::fuseDistances(std::vector<std::vector<float>>
             } else {
                 fused_cost_matrix[i][j] = iou_weight * iou_costs[i][j] + (1-iou_weight) * embed_costs[i][j];
             }
+            std::cout << fused_cost_matrix[i][j] << ", ";
         }
+        std::cout << "], \n";
     }
+    std::cout << "]\n";
+    std::cout.flush();
     return fused_cost_matrix;
 }
 

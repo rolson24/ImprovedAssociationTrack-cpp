@@ -27,13 +27,13 @@ void ImprAssoc_track::KalmanFilter::initiate(StateMean &mean, StateCov &covarian
     mean.block<1, 4>(0, 4) = Eigen::Vector4f::Zero();
 
     StateMean std;
-    std(0) = 2 * std_weight_position_ * measurement[3];
+    std(0) = 2 * std_weight_position_ * measurement[2];
     std(1) = 2 * std_weight_position_ * measurement[3];
-    std(2) = 1e-2;
+    std(2) = 2 * std_weight_position_ * measurement[2];
     std(3) = 2 * std_weight_position_ * measurement[3];
-    std(4) = 10 * std_weight_velocity_ * measurement[3];
+    std(4) = 10 * std_weight_velocity_ * measurement[2];
     std(5) = 10 * std_weight_velocity_ * measurement[3];
-    std(6) = 1e-5;
+    std(6) = 10 * std_weight_velocity_ * measurement[2];
     std(7) = 10 * std_weight_velocity_ * measurement[3];
 
     StateMean tmp = std.array().square();
@@ -43,13 +43,13 @@ void ImprAssoc_track::KalmanFilter::initiate(StateMean &mean, StateCov &covarian
 void ImprAssoc_track::KalmanFilter::predict(StateMean &mean, StateCov &covariance)
 {
     StateMean std;
-    std(0) = std_weight_position_ * mean(3);
+    std(0) = std_weight_position_ * mean(2);
     std(1) = std_weight_position_ * mean(3);
-    std(2) = 1e-2;
+    std(2) = std_weight_position_ * mean(2);
     std(3) = std_weight_position_ * mean(3);
-    std(4) = std_weight_velocity_ * mean(3);
+    std(4) = std_weight_velocity_ * mean(2);
     std(5) = std_weight_velocity_ * mean(3);
-    std(6) = 1e-5;
+    std(6) = std_weight_velocity_ * mean(2);
     std(7) = std_weight_velocity_ * mean(3);
 
     StateMean tmp = std.array().square();
@@ -79,9 +79,9 @@ void ImprAssoc_track::KalmanFilter::project(StateHMean &projected_mean, StateHCo
                                        const float& conf)
 {
     DetectBox std;
-    std << std_weight_position_ * mean(3),
+    std << std_weight_position_ * mean(2),
            std_weight_position_ * mean(3),
-           1e-1,
+           std_weight_position_ * mean(2),
            std_weight_position_ * mean(3);
 
     projected_mean = update_mat_ * mean.transpose();

@@ -78,10 +78,8 @@ void ImprAssoc_track::STrack::activate(const size_t& frame_id, const size_t& tra
     updateRect();
 
     state_ = STrackState::Tracked;
-    if (frame_id == 1)
-    {
-        is_activated_ = true;
-    }
+
+    is_activated_ = true;
     track_id_ = track_id;
     frame_id_ = frame_id;
     start_frame_id_ = frame_id;
@@ -113,6 +111,7 @@ void ImprAssoc_track::STrack::predict()
 {
     if (state_ != STrackState::Tracked)
     {
+        mean_[6] = 0;
         mean_[7] = 0;
     }
     kalman_filter_.predict(mean_, covariance_);
